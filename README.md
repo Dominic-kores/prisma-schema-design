@@ -39,6 +39,9 @@ By completing this project, I aim to demonstrate my understanding of:
 | VS Code | Development environment |
 | Git & GitHub | Version control and project hosting |
 
+## Live Pages
+[Live] (https://dominic-kores.github.io/prisma-schema-design/)
+
 ## Project Structure
 
 ```text
