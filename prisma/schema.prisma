@@ -1,0 +1,231 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+// connect to the postgressql database
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ============================================================
+// BONUS: E-COMMERCE ORDER STATUS ENUM
+// ============================================================
+
+// Defines the allowed stages of an order.
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+
+
+// ============================================================
+// TASK 1: BLOG PLATFORM SCHEMA
+// Models: User, Post, Comment, Tag
+// ============================================================
+
+// Stores details of registered blog users.
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  bio       String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  posts     Post[]
+  // One user can write many comments.
+  comments  Comment[]
+
+  orders Order[]
+}
+
+// Stores blog posts created by users.
+
+model Post {
+  id        Int       @id @default(autoincrement())
+  title     String
+  content   String
+  published Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Foreign key referencing the author.
+  authorId  Int
+  // Each post belongs to one user.
+  author    User      @relation(fields: [authorId], references: [id])
+  // A post can receive many comments.
+  comments  Comment[]
+  // A post can have multiple tags.
+  tags      Tag[]
+}
+
+// Stores comments made on blog posts.
+model Comment {
+  id        Int      @id @default(autoincrement())
+  text      String
+  createdAt DateTime @default(now())
+  // Foreign keys
+  userId    Int
+  postId    Int
+  // Each comment belongs to one user.
+  user      User     @relation(fields: [userId], references: [id])
+  // Each comment belongs to one post.
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+// Stores tags used to organise posts.
+model Tag {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  // Many-to-many relationship with posts
+  posts Post[]
+}
+
+// ============================================================
+// TASK 2: E-COMMERCE PLATFORM SCHEMA
+// Models: Category, Product, Order, OrderItem
+// ============================================================
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  // A category contains many products.
+  products    Product[]
+}
+
+// Represents a product available for purchase.
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  // Stock starts at zero.
+  stock       Int         @default(0)
+  imageUrl    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  // Each product belongs to one category.
+  categoryId  Int
+  category    Category    @relation(fields: [categoryId], references: [id])
+  // A product can appear in many order items.
+  orderItems  OrderItem[]
+}
+
+// Represents an order placed by a customer.
+model Order {
+  id          Int         @id @default(autoincrement())
+  totalAmount Decimal     @db.Decimal(10, 2)
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  // Each order belongs to one customer.
+  customerId  Int
+  customer    User        @relation(fields: [customerId], references: [id])
+  // An order can have many individual items.
+  items       OrderItem[]
+  
+}
+
+// Connects purchased products to orders.
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  // Foreign keys connecting order and product
+  orderId   Int
+  productId Int
+  // Each item belongs to one order.
+  order     Order   @relation(fields: [orderId], references: [id])
+  // Each item references one product.
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+// ============================================================
+// TASK 3: SCHOOL MANAGEMENT SCHEMA
+// Models: Department, Teacher, Course, Student, Enrollment
+// ============================================================
+
+// Represents a department within the school.
+model Department {
+  id       Int       @id @default(autoincrement())
+  // Department name and code must be unique.
+  name     String    @unique
+  code     String    @unique
+  // A department can employ many teachers.
+  teachers Teacher[]
+  // A department can offer many courses.
+  courses  Course[]
+}
+
+// Stores information about school teachers.
+model Teacher {
+  id           Int        @id @default(autoincrement())
+  name         String
+  email        String     @unique
+  // Optional date of employment
+  hireDate     DateTime?
+  // Each teacher belongs to one department.
+  departmentId Int
+  department   Department @relation(fields: [departmentId], references: [id])
+  // A teacher can teach multiple courses.
+  courses      Course[]
+}
+
+// Represents a course offered by the school.
+model Course {
+  id           Int          @id @default(autoincrement())
+  name         String
+  code         String       @unique
+  credits      Int          @default(3)
+  // Course belongs to one department.
+  departmentId Int
+  department   Department   @relation(fields: [departmentId], references: [id])
+  // Course is taught by one teacher.
+  teacherId    Int
+  teacher      Teacher      @relation(fields: [teacherId], references: [id])
+  // A course can have many student enrollments.
+  enrollments  Enrollment[]
+}
+
+// Represents a student registered at the school.
+model Student {
+  id          Int          @id @default(autoincrement())
+  name        String
+  email       String       @unique
+  // Optional student details
+  age         Int?
+  town        String?
+  enrolledAt  DateTime     @default(now())
+  // A student can enroll in many courses.
+  enrollments Enrollment[]
+}
+
+// Connects a student to a course.
+model Enrollment {
+  id           Int      @id @default(autoincrement())
+  // Optional grade percentage from 0 to 100.
+  grade        Int?
+  enrolledDate DateTime @default(now())
+  // Foreign keys
+  studentId    Int
+  courseId     Int
+  // Each enrollment belongs to one student.
+  student      Student  @relation(fields: [studentId], references: [id])
+  // Each enrollment belongs to one course.
+  course       Course   @relation(fields: [courseId], references: [id])
+
+  // Prevents the same student from enrolling in the same course more than once.
+  @@unique([studentId, courseId])
+}
